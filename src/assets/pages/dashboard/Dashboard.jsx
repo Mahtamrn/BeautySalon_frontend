@@ -6,6 +6,8 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState([]);
+  const [users, setUsers] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -87,6 +89,60 @@ const Dashboard = () => {
     fetchAppointments();
   }, [user, appointments]);
 
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      const token = localStorage.getItem("token");
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/favorites`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch favorites");
+        }
+
+        const data = await response.json();
+        setFavorites(data);
+      } catch (error) {
+        console.error("Error fetching favorites:", error);
+      }
+    };
+
+    if (user) {
+      fetchFavorites();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !user.is_admin) return;
+
+    const fetchUsers = async () => {
+      const token = localStorage.getItem("token");
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/users`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch users");
+        }
+
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+
+    fetchUsers();
+  }, [user]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
@@ -140,6 +196,66 @@ const Dashboard = () => {
       console.error("Error cancelling appointment:", error);
     }
   };
+
+  const handleRemoveFavorite = async (serviceId) => {
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/favorites`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ service_id: serviceId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to remove from favorites");
+      }
+
+      setFavorites(favorites.filter((fav) => fav.id !== serviceId));
+    } catch (error) {
+      console.error("Error removing from favorites:", error);
+      alert("Error removing from favorites. Please try again.");
+    }
+  };
+
+  const handleBlockUser = async (userId, isBlocked) => {
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/block`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: userId, is_blocked: !isBlocked }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update user status");
+      }
+
+      setUsers(
+        users.map((usr) =>
+          usr.id === userId ? { ...usr, is_blocked: !isBlocked } : usr
+        )
+      );
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      alert("Error updating user status. Please try again.");
+    }
+  };
+
+  if (!user) {
+    return (
+      <p className="text-[#8D6E63] flex items-center justify-center min-h-screen">
+        Loading user data...
+      </p>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#F7E8DA]">
@@ -225,6 +341,29 @@ const Dashboard = () => {
                 ))}
               </ul>
             )}
+            <h3 className="text-xl font-bold mt-4 text-[#5D4037]">
+              Favorite Services
+            </h3>
+            {favorites.length === 0 ? (
+              <p className="text-[#8D6E63]">No favorites added.</p>
+            ) : (
+              <ul className="mt-2 text-left">
+                {favorites.map((fav) => (
+                  <li
+                    key={fav.id}
+                    className="border-b border-[#C9A594] py-2 text-sm text-[#5D4037]"
+                  >
+                    {fav.name} - ${fav.price}
+                    <button
+                      onClick={() => handleRemoveFavorite(fav.id)}
+                      className="ml-2 text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <button
               onClick={handleLogout}
@@ -241,6 +380,39 @@ const Dashboard = () => {
           </>
         ) : (
           <p className="text-[#8D6E63]">Loading user data...</p>
+        )}
+        {user.is_admin && (
+          <>
+            <h3 className="text-xl font-bold mt-4 text-[#5D4037]">
+              Registered Users
+            </h3>
+            {users.length === 0 ? (
+              <p className="text-[#8D6E63]">No users found.</p>
+            ) : (
+              <ul className="mt-2 text-left">
+                {users.map((usr) => (
+                  <li
+                    key={usr.id}
+                    className="border-b border-[#C9A594] py-2 text-sm text-[#5D4037] flex justify-between items-center"
+                  >
+                    <span>
+                      {usr.name} - {usr.email}
+                    </span>
+                    <button
+                      onClick={() => handleBlockUser(usr.id, usr.is_blocked)}
+                      className={`ml-2 text-xs px-2 py-1 rounded transition ${
+                        usr.is_blocked
+                          ? "bg-green-500 text-white hover:bg-green-600"
+                          : "bg-red-500 text-white hover:bg-red-600"
+                      }`}
+                    >
+                      {usr.is_blocked ? "Unblock" : "Block"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
     </div>
