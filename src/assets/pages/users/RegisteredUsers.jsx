@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_UR;
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL;
 
 const RegisteredUsers = () => {
   const [users, setUsers] = useState([]);
