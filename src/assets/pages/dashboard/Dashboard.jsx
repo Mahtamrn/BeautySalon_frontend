@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+const API_BASE_URL = "http://localhost:5000";
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -11,6 +12,7 @@ const Dashboard = () => {
     const token = localStorage.getItem("token");
 
     if (!token) {
+      console.error("No token found! Redirecting to login...");
       navigate("/");
       return;
     }
@@ -18,6 +20,7 @@ const Dashboard = () => {
     const decodeToken = (token) => {
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
+        console.log("Decoded token:", payload);
         return payload;
       } catch (error) {
         console.error("Invalid token:", error);
@@ -27,38 +30,62 @@ const Dashboard = () => {
 
     const userData = decodeToken(token);
     if (!userData) {
+      console.error("Failed to decode token! Redirecting to login...");
       localStorage.removeItem("token");
       navigate("/");
       return;
     }
 
     setUser(userData);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!user) {
+      console.log("User is null, waiting for data...");
+      return;
+    }
+
+    console.log(
+      "Fetching appointments for:",
+      user.is_admin ? "Admin" : "Customer"
+    );
 
     const fetchAppointments = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.error("No token found in localStorage");
+        return;
+      }
+
       try {
         const response = await fetch(
-          userData.is_admin
-            ? "http://localhost:3000/appointments"
-            : "http://localhost:3000/appointments/me",
+          user.is_admin
+            ? `${API_BASE_URL}/appointments`
+            : `${API_BASE_URL}/appointments/me`,
           {
-            headers: { Authorization: " Bearer ${token} " },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
-        const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch appointments");
+          throw new Error("Invalid token or unauthorized request");
         }
+
+        const data = await response.json();
         setAppointments(data);
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching appointments:", error);
-      } finally {
         setLoading(false);
       }
     };
 
     fetchAppointments();
-  }, [navigate]);
+  }, [user, appointments]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -69,12 +96,12 @@ const Dashboard = () => {
     const token = localStorage.getItem("token");
     try {
       const response = await fetch(
-        `http://localhost:3000/appointments/${id}/status`,
+        `${API_BASE_URL}/appointments/${id}/status`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Bearer ${token}",
+            Authorization: `Bearer ${token} `,
           },
           body: JSON.stringify({ status }),
         }
@@ -97,9 +124,9 @@ const Dashboard = () => {
   const handleCancel = async (id) => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:3000/appointments/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
         method: "DELETE",
-        headers: { " Authorization": "Bearer ${token} " },
+        headers: { " Authorization": `Bearer ${token} ` },
       });
 
       if (!response.ok) {
@@ -115,35 +142,35 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#F7E8DA]">
       <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-md text-center">
-        <h2 className="text-2xl font-bold mb-4">Dashboard</h2>
+        <h2 className="text-2xl font-bold text-[#5D4037] mb-4">Dashboard</h2>
         {user ? (
           <>
-            <p className="text-lg">
+            <p className="text-lg text-[#8D6E63]">
               Welcome, <span className="font-semibold">{user.email}</span>!
             </p>
-            <p className="text-md mt-2">
+            <p className="text-md mt-2 text-[#BFA197]">
               Role:{" "}
               <span className="font-semibold">
                 {user.is_admin ? "Admin" : "Customer"}
               </span>
             </p>
 
-            <h3 className="text-xl font-bold mt-4">
+            <h3 className="text-xl font-bold mt-4 text-[#5D4037]">
               {user.is_admin ? "All Appointments" : "My Appointments"}
             </h3>
 
             {loading ? (
-              <p>Loading appointments...</p>
+              <p className="text-[#8D6E63]">Loading appointments...</p>
             ) : appointments.length === 0 ? (
-              <p>No appointments found.</p>
+              <p className="text-[#8D6E63]">No appointments found.</p>
             ) : (
               <ul className="mt-2 text-left">
                 {appointments.map((appointment) => (
                   <li
                     key={appointment.id}
-                    className="border-b py-2 text-sm flex flex-col"
+                    className="border-b border-[#C9A594] py-2 text-sm flex flex-col text-[#5D4037]"
                   >
                     <span>
                       {appointment.service_name} - {appointment.date} (
@@ -168,7 +195,7 @@ const Dashboard = () => {
                             onClick={() =>
                               handleUpdateStatus(appointment.id, "confirmed")
                             }
-                            className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition"
+                            className="text-xs bg-[#8D6E63] text-white px-2 py-1 rounded hover:bg-[#BFA197] transition"
                           >
                             Confirm
                           </button>
@@ -178,7 +205,7 @@ const Dashboard = () => {
                             onClick={() =>
                               handleUpdateStatus(appointment.id, "cancelled")
                             }
-                            className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
+                            className="text-xs bg-[#C9A594] text-white px-2 py-1 rounded hover:bg-[#8D6E63] transition"
                           >
                             Cancel
                           </button>
@@ -188,7 +215,7 @@ const Dashboard = () => {
                       appointment.status === "pending" && (
                         <button
                           onClick={() => handleCancel(appointment.id)}
-                          className="text-xs bg-red-500 text-white px-2 py-1 mt-2 rounded hover:bg-red-600 transition"
+                          className="text-xs bg-[#C9A594] text-white px-2 py-1 mt-2 rounded hover:bg-[#8D6E63] transition"
                         >
                           Cancel Appointment
                         </button>
@@ -201,13 +228,19 @@ const Dashboard = () => {
 
             <button
               onClick={handleLogout}
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+              className="mt-4 px-4 py-2 bg-[#8D6E63] text-white rounded-lg hover:bg-[#BFA197] transition"
             >
               Logout
             </button>
+            <button
+              onClick={() => navigate("/services")}
+              className="mt-4 px-4 py-2 bg-[#8D6E63] text-white rounded-lg hover:bg-[#BFA197] transition"
+            >
+              View Services
+            </button>
           </>
         ) : (
-          <p>Loading user data...</p>
+          <p className="text-[#8D6E63]">Loading user data...</p>
         )}
       </div>
     </div>
