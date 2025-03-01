@@ -221,34 +221,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleBlockUser = async (userId, isBlocked) => {
-    const token = localStorage.getItem("token");
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/users/block`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ user_id: userId, is_blocked: !isBlocked }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update user status");
-      }
-
-      setUsers(
-        users.map((usr) =>
-          usr.id === userId ? { ...usr, is_blocked: !isBlocked } : usr
-        )
-      );
-    } catch (error) {
-      console.error("Error updating user status:", error);
-      alert("Error updating user status. Please try again.");
-    }
-  };
-
   if (!user) {
     return (
       <p className="text-[#8D6E63] flex items-center justify-center min-h-screen">
@@ -371,48 +343,9 @@ const Dashboard = () => {
             >
               Logout
             </button>
-            <button
-              onClick={() => navigate("/services")}
-              className="mt-4 px-4 py-2 bg-[#8D6E63] text-white rounded-lg hover:bg-[#BFA197] transition"
-            >
-              View Services
-            </button>
           </>
         ) : (
           <p className="text-[#8D6E63]">Loading user data...</p>
-        )}
-        {user.is_admin && (
-          <>
-            <h3 className="text-xl font-bold mt-4 text-[#5D4037]">
-              Registered Users
-            </h3>
-            {users.length === 0 ? (
-              <p className="text-[#8D6E63]">No users found.</p>
-            ) : (
-              <ul className="mt-2 text-left">
-                {users.map((usr) => (
-                  <li
-                    key={usr.id}
-                    className="border-b border-[#C9A594] py-2 text-sm text-[#5D4037] flex justify-between items-center"
-                  >
-                    <span>
-                      {usr.name} - {usr.email}
-                    </span>
-                    <button
-                      onClick={() => handleBlockUser(usr.id, usr.is_blocked)}
-                      className={`ml-2 text-xs px-2 py-1 rounded transition ${
-                        usr.is_blocked
-                          ? "bg-green-500 text-white hover:bg-green-600"
-                          : "bg-red-500 text-white hover:bg-red-600"
-                      }`}
-                    >
-                      {usr.is_blocked ? "Unblock" : "Block"}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
         )}
       </div>
     </div>

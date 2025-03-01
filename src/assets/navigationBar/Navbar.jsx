@@ -28,6 +28,11 @@ const Navbar = () => {
             </Link>
           </li>
           <li>
+            <Link to="/dashboard" className="hover:underline">
+              Dashboard
+            </Link>
+          </li>
+          <li>
             <Link to="/services" className="hover:underline">
               Services
             </Link>
