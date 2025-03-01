@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_UR;
 
 const Services = () => {
   const [services, setServices] = useState([]);
